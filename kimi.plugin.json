@@ -1,7 +1,7 @@
 {
   "$schema": "https://catalog.msh.team/misc/kimi.plugin.schema.json",
   "name": "wildcard-for-kimi",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "真爱粉亮出订阅证明，走 Wildcard 免审直通报名 KIMI Talk；普通用户正常排队审核。Wildcard 是通用活动报名分层工具，本插件为 KIMI 社区版本。",
   "keywords": [
     "Wildcard",
@@ -26,6 +26,7 @@
     "locales": "./locales/",
     "tryPrompts": [
       "最近有哪些 Kimi Talk 线下活动？",
+      "Kimi 官方最近有什么新活动？",
       "我想报名上海站的 Kimi Talk",
       "我是深度用户，帮我走免审直通通道报名"
     ],

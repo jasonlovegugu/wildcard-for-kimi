@@ -4,11 +4,15 @@ Kimi Work 插件：在对话里浏览 Kimi Talk 及 Kimi 官方社区线下活�
 
 Wildcard 是通用的活动报名分层工具，本仓库为 KIMI 社区版本。
 
+![报名流程](docs/flow.png)
+
 ## 安装
+
+仓库地址：**https://github.com/jasonlovegugu/wildcard-for-kimi**
 
 把仓库链接或 zip 发给朋友，任选一种方式安装：
 
-**方式一（推荐，插件页直装 GitHub 链接）**：打开 Kimi 桌面版插件页，点「＋ 自定义插件」，粘贴本仓库链接安装。装完即可在对话里使用，无需重启。
+**方式一（推荐，插件页直装 GitHub 链接）**：打开 Kimi 桌面版插件页，点「＋ 自定义插件」，粘贴上面的仓库链接安装。装完即可在对话里使用，无需重启。
 
 **方式二（本地 zip）**：下载仓库 zip 并解压（保证 `kimi.plugin.json` 在解压后目录的根部），然后在 Kimi 桌面版插件页「个人」页签通过本地入口安装。
 
@@ -23,8 +27,12 @@ Wildcard 是通用的活动报名分层工具，本仓库为 KIMI 社区版本�
 安装后直接用自然语言，例如：
 
 - 最近有哪些 Kimi Talk 线下活动？
-- 我想报名上海站的 Kimi Talk
+- 我想报名深圳站的 Kimi Talk
 - 我是深度用户，帮我走免审直通通道报名
+
+## 当前活动
+
+活动清单由组织者人工维护在 `skills/wildcard-for-kimi/data/events.json`，只收录带真实可验证 Luma 链接的活动；新活动也会经 Luma 官方日历同步源自动发现。
 
 ## License
 

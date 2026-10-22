@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      color: CanvasText;
+      background: transparent;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .choice {
+      min-height: 132px;
+      padding: 16px;
+      border: 1px solid rgba(128, 128, 128, 0.38);
+      border-radius: 14px;
+      color: inherit;
+      background: Canvas;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .choice:hover:not(:disabled) { border-color: #1677ff; }
+    .choice:focus-visible { outline: 3px solid rgba(22, 119, 255, 0.35); outline-offset: 2px; }
+    .choice:disabled { cursor: default; opacity: 0.62; }
+    .choice.selected { border-color: #1677ff; box-shadow: inset 0 0 0 1px #1677ff; opacity: 1; }
+
+    .badge, .title, .description { display: block; }
+    .badge { margin-bottom: 10px; color: #1677ff; font-size: 12px; font-weight: 600; }
+    .title { margin-bottom: 8px; font-size: 16px; font-weight: 650; }
+    .description { font-size: 13px; line-height: 1.55; opacity: 0.76; }
+
+    .status {
+      min-height: 20px;
+      margin: 12px 2px 0;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0.76;
+    }
+
+    .message {
+      margin-top: 8px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(128, 128, 128, 0.12);
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .message:empty { display: none; }
+    @media (max-width: 480px) { .choices { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="choices">
+    <button class="choice" type="button" data-choice="fastlane" data-label="Wildcard 直通通道">
+      <span class="badge">免审直通</span>
+      <span class="title">Wildcard 直通通道</span>
+      <span class="description">授权读取订阅信息，快速核验；未达标则回落普通通道。</span>
+    </button>
+    <button class="choice" type="button" data-choice="standard" data-label="普通通道">
+      <span class="badge">正常审核</span>
+      <span class="title">普通通道</span>
+      <span class="description">提供基本信息后进入审核队列，无需读取订阅信息。</span>
+    </button>
+  </div>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div id="message" class="message"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const messages = {
+        fastlane: "已选 Wildcard 直通。请在对话中确认是否授权：打开你的浏览器读取当前套餐、当前用量、最早订阅时间和历史订阅条数，并截取一张订阅页截图；上传前逐项确认，可随时中止，不读取密码、支付信息或 Cookie。",
+        standard: "已选普通通道。请在对话中提供姓名、邮箱或微信，以及想参加的活动；一句话动机可选。"
+      };
+      const waitingText = "已选择，正在同步到对话…";
+      const doneText = "已接棒，请在对话中继续。";
+      const slowText = "后台接棒较慢。无需重复点击，可直接在对话中按上方指引继续。";
+      const errorText = "后台接棒未成功。请直接在对话中按上方指引继续，无需重复点击。";
+      const buttons = Array.from(document.querySelectorAll("[data-choice]"));
+      const status = document.getElementById("status");
+      const message = document.getElementById("message");
+      const runtime = window.DaimonWidget;
+      let state = "idle";
+      let selectedChoice = null;
+      let slowTimer = null;
+
+      function paint() {
+        buttons.forEach((button) => {
+          const selected = button.dataset.choice === selectedChoice;
+          button.classList.toggle("selected", selected);
+          button.setAttribute("aria-pressed", String(selected));
+          button.disabled = state !== "idle";
+        });
+      }
+
+      function clearSlowTimer() {
+        if (slowTimer !== null) {
+          clearTimeout(slowTimer);
+          slowTimer = null;
+        }
+      }
+
+      function showFallback(text) {
+        if (state === "done") return;
+        state = "error";
+        clearSlowTimer();
+        status.textContent = text;
+        paint();
+      }
+
+      function render(data) {
+        const main = data && data.main;
+        if (!main || typeof main.message !== "string" || !main.message.trim()) return;
+        const choice = main.choice;
+        if (choice === "fastlane" || choice === "standard") {
+          if (selectedChoice && choice !== selectedChoice) return;
+          selectedChoice = choice;
+        }
+        state = "done";
+        clearSlowTimer();
+        message.textContent = main.message;
+        status.textContent = doneText;
+        paint();
+      }
+
+      function choose(choice, label) {
+        if (state !== "idle" || !Object.prototype.hasOwnProperty.call(messages, choice)) return;
+        state = "waiting";
+        selectedChoice = choice;
+        message.textContent = messages[choice];
+        status.textContent = waitingText;
+        paint();
+        slowTimer = setTimeout(() => showFallback(slowText), 45000);
+
+        try {
+          if (!runtime || typeof runtime.emit !== "function") {
+            showFallback(errorText);
+            return;
+          }
+          Promise.resolve(runtime.emit("submit", { choice, label }))
+            .catch(() => showFallback(errorText));
+        } catch {
+          showFallback(errorText);
+        }
+      }
+
+      buttons.forEach((button) => {
+        button.setAttribute("aria-pressed", "false");
+        button.addEventListener("click", () => choose(button.dataset.choice, button.dataset.label));
+      });
+      status.textContent = "请选择报名通道。";
+      paint();
+
+      try {
+        if (runtime && typeof runtime.onDataChange === "function") {
+          runtime.onDataChange(render);
+        }
+      } catch {
+      }
+
+      try {
+        if (runtime && runtime.data) {
+          render(runtime.data);
+        }
+      } catch {
+      }
+    })();
+  </script>
+</body>
+</html>

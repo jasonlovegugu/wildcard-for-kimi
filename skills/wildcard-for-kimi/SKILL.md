@@ -41,9 +41,9 @@ description: 浏览 Kimi Talk 及 Kimi 官方社区线下活动、在对话里�
 
 ## 流程 A2：通道选择卡片（免打字，宿主具备 Blueprint 能力时）
 
-目标：用一张二选一卡片替代文字提问，用户点击即选。链路：卡片点击 → `events.submit` → Binding → 后台接棒代理 → artifact 回显在卡片上。
+目标：二选一卡片替代文字提问。点击后立即显示本地固定指引，同时走 `events.submit` → Binding → 后台接棒代理；artifact 用于回执与完成态恢复，不是唯一用户反馈。
 
-1. **能力门控**：仅当本会话技能列表能读到 `automation` 与 `widget` 技能（宿主具备 Blueprint 能力）时走本流程；读不到就文字提问，不要尝试调用 Widget/Automation 工具。
+1. **能力门控**：仅当本会话技能列表能读到 `automation` 与 `widget` 技能时走本流程；读不到就文字提问，不要尝试调用 Widget/Automation 工具。
 2. **创建小组件** `Widget.create`（title「报名通道选择」，type html），声明 `events.submit` schema：
 
    ```json
@@ -53,11 +53,16 @@ description: 浏览 Kimi Talk 及 Kimi 官方社区线下活动、在对话里�
      "required": ["choice", "label"] }
    ```
 
-3. **写 index.html**（写入 create 返回的 workspaceRoot）：两张卡片并排——「Wildcard 直通通道」（badge：免审直通）与「普通通道」（badge：正常审核），各配一句话说明；点击后禁用两张卡、显示已选状态，调 `window.DaimonWidget.emit("submit", { choice, label })`；`onDataChange` 里读取 `data.main.message` 渲染接棒回复。所有 host API 调用必须 feature-detect（`if (runtime && typeof runtime.emit === 'function')`）。
-4. **创建后台接棒任务** `AutomationCreate`：execution `{ kind: "agent", mode: "background" }`，`input` json schema 与 submit 兼容（同结构即可），`result` artifact schema `{ "type": "object", "properties": { "message": { "type": "string" } }, "required": ["message"] }`，trigger manual。prompt 要点：根据 run input 的 choice 生成下一步文案——fastlane 输出知情授权话术（C1 四要素：读哪四项信息、截图、上传前逐条确认、不碰凭证，问是否同意）；standard 输出信息收集开场（姓名、联系方式、动机，一次问 1~3 项）；文案口语、80 字内，用 AutomationOutput 输出 `{ artifact: { message } }`。额度：每次点击触发一次模型运行，提示语里向用户说明「点一次会消耗少量额度」。
-5. **连接** `Binding.create`（automationId + widgetId）；`Widget.validate` 后 `Widget.show` 展示。
-6. **接棒**：卡片上收到回复后，在对话里按所选通道继续——fastlane 进入 C1 等用户答复，standard 进入流程 B。后续步骤（授权确认、信息收集）也可继续用同样的「卡片表单 + submit」模式做进卡片，让用户全程免打字。
-7. 对话结束后卡片即弃，不要把演示用小组件/任务长期保留。
+3. **复制固定模板**：把 `templates/channel-picker.html` 复制为 create 返回的 `workspaceRoot/index.html`，不要每次临时重写页面。模板已实现单次触发、本地即时指引、host API feature detection、`onDataChange` 订阅与当前快照读取、幂等渲染、完成态锁定、异常与慢回执文字兜底，不得删成只订阅 `onDataChange` 的版本。
+4. **创建后台接棒任务** `AutomationCreate`：execution `{ kind: "agent", "mode": "background" }`，`input` json schema 与 submit 兼容，result artifact schema `{ "type": "object", "properties": { "message": { "type": "string" }, "choice": { "type": "string", "enum": ["fastlane", "standard"] } }, "required": ["message", "choice"] }`，trigger manual。prompt 必须按 run input 的 choice 原样使用下面对应文案，不自由增删授权要素，并让 artifact.choice 等于输入 choice：
+   - fastlane：`已选 Wildcard 直通。请在对话中确认是否授权：打开你的浏览器读取当前套餐、当前用量、最早订阅时间和历史订阅条数，并截取一张订阅页截图；上传前逐项确认，可随时中止，不读取密码、支付信息或 Cookie。`
+   - standard：`已选普通通道。请在对话中提供姓名、邮箱或微信，以及想参加的活动；一句话动机可选。`
+   用 AutomationOutput 输出 `{ artifact: { message, choice } }`。每次点击消耗少量额度，提示用户。
+5. **连接** `Binding.create`（automationId + widgetId）。
+6. **校验后展示**：`Widget.validate` 通过后才 `Widget.show`。严格按 create → 写页面 → AutomationCreate → Binding.create → validate → show 执行；禁止在 Binding 和 validate 完成前提前 show。
+7. **接棒**：按所选通道在对话里继续（fastlane → C1，用户未明确同意不得进入 C2；standard → 流程 B）。本地指引已显示时，不必让用户等待 artifact 才能继续。
+8. **复用约束**：后续授权确认、信息收集等卡片必须保留模板的快照与订阅、幂等渲染、单次触发及失败恢复机制。涉及真实写操作的卡片必须增加 `request_id` 并由后端幂等去重；禁用按钮不能代替幂等，超时不得自动重发。
+9. 对话结束后卡片即弃，不留长期小组件/任务。
 
 ## 流程 B：普通报名
 

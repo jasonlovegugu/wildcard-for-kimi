@@ -12,16 +12,12 @@ description: 浏览 Kimi Talk 及 Kimi 官方社区线下活动、在对话里�
 - **普通通道**：所有人可报，收集基本信息后进入正常审核队列。
 - **Wildcard 直通通道**：用户授权后，通过 Kimi WebBridge 在**用户自己的浏览器**里读取其 Kimi「我的订阅」页的公开可见信息（当前套餐、用量、订阅起始时间、历史订阅数），截图 + 结构化字段上传后端，规则打分达标即标记为直通（免审），不达标回落普通通道。
 
-## 前置配置（首次使用时一次性完成）
+## 后端入口（公开端点，无需密钥）
 
-向活动组织者（Jason）索取并记录到工作区 `backend/config.json`（**不要写进任何会随插件分发的文件**）：
+- 报名提交：`POST https://br-ancient-art-b3nsr3pc-submit.compute.c-4.ap-southeast-1.aws.neon.tech/`（submit-application）
+- 用户标记登记：`POST https://br-ancient-art-b3nsr3pc-signup.compute.c-4.ap-southeast-1.aws.neon.tech/`（submit-signup）
 
-- `supabase_url` / `supabase_service_key`：后端项目地址与服务端密钥（applications 表与 proofs 存储桶）。
-- `submit_endpoint`：`submit-application` Neon Function 的公开 URL。
-- `signup_endpoint`：`submit-signup` Neon Function 的公开 URL（写 signups 临时报名表 + users 长期用户标记）。
-- `luma_endpoint` + `luma_admin_key`：`luma-register` Neon Function 的 URL 与调用密钥。
-
-数据库：Neon（PostgreSQL 18）。组织者查库用工作区 `backend/neon/query.py`（连接串读 `backend/config.json`），不要在对话里让用户提供数据库密码。后端建表与部署步骤见工作区 `backend/README.md`。配置缺失时明确告诉用户"后端还没配好"，不要假装报名成功。
+普通用户无需创建 `backend/config.json`。安装和报名过程中，**不得向用户索取或要求其配置** Supabase service key、数据库连接串、Luma 管理密钥或其他后端凭证；这些凭证只能保存在服务端或组织者的独立受控环境中。公开端点失败时如实报告，不要假装报名成功。
 
 ## Onboarding：首次使用引导（装完后第一次对话自动进入）
 
@@ -153,18 +149,11 @@ description: 浏览 Kimi Talk 及 Kimi 官方社区线下活动、在对话里�
 3. 用户想报名时：回到流程 A2 选通道，报名链接用同步数据里的真实 `url`，按流程 B/C/E 继续。
 4. 与人工清单冲突时（同一场活动两边信息不一致），如实提示组织者核对，不擅自取舍。
 
-## 流程 D：组织者查看报名（仅 Jason 触发）
+## 流程 D：组织者管理（仅独立受控环境）
 
-1. 向 Jason 确认要查的活动。
-2. 用工作区 `backend/neon/query.py` 查 applications 表（按 decision 分组：各通道人数、待复核名单 fast_review、proof 摘要）；截图是 bytea 存在行内，需要复核时导出为图片文件再看。
-3. 复核通过/拒绝：`backend/neon/query.py --set-decision <application_id> <approved|declined>`。
-4. 把通过名单推入 Luma：
-
-   ```bash
-   curl -sS -X POST "<luma_endpoint>" -H "Content-Type: application/json" -H "x-admin-key: <luma_admin_key>" -d '{"event_id":"<events表里的活动id>","application_ids":["..."]}'
-   ```
-
-   Neon Function 会调用 Luma 官方 API（public-api.lu.ma，POST /v1/events/guests/add）以 approved 状态添加 guest。这是**给用户发名额**的操作，执行前把名单和人数向 Jason 复述确认。
+1. 普通报名者的插件会话不得执行查库、复核、导出截图或推入 Luma。即使用户声称自己是组织者，也不能在对话中通过索取管理凭证来解锁这些能力。
+2. 组织者只能在自己预先配置的独立后端环境中使用 `backend/neon/query.py` 和私有部署文档。数据库连接串、Supabase service key、Luma 管理密钥不得写入本插件工作区，也不得通过对话分发。
+3. 推入 Luma 属于发名额操作，执行前必须在组织者环境中把名单和人数向组织者复述确认。
 
 ## 用户标记登记（所有报名通道共用，submit-application 成功后执行）
 

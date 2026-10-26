@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Wildcard · 拉取 Luma 官方日历（kimiambassadorevent）自动同步的活动
 # 数据源：Supabase wildcard-kimi-events / synced_events（每小时由 luma-sync 更新，公开只读）
-# 用法：python3 scripts/fetch_synced_events.py [过去多少小时内开始的，默认 12]
+# 用法：python3 /path/to/wildcard-for-kimi/scripts/fetch_synced_events.py [过去多少小时内开始的，默认 12]
 # 输出：{"count": N, "events": [...]}（按开始时间升序；时间均为 UTC ISO）
 import json
 import sys

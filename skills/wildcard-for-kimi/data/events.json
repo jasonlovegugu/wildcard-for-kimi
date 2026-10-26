@@ -6,10 +6,10 @@
     "city": "深圳",
     "venue": "具体地址报名后见 Luma 确认页（仅报名可见）",
     "start_at": "2026-11-01T14:00:00+08:00",
-    "capacity": null,
+    "capacity": 80,
     "luma_event_id": "evt-tZ7Zw8kPxsZ67Hg",
     "luma_url": "https://luma.com/9xamaxb2",
     "status": "open",
-    "description": "Kimi Talk 深圳站线下活动，2026-11-01（周六）14:00–18:00。报名与资格审核经 Wildcard 插件完成；确切地点以 Luma 报名确认页为准。"
+    "description": "Kimi Talk 深圳站线下活动，2026-11-01（周日）14:00–18:00。报名与资格审核经 Wildcard 插件完成；确切地点以 Luma 报名确认页为准。"
   }
 ]
